@@ -7,11 +7,21 @@ final class PoseTests: XCTestCase {
         let q = simd_quatf(angle: 1.1, axis: simd_normalize(SIMD3<Float>(1, 2, 3)))
         XCTAssertEqual(abs(simd_dot(Pose.relative(q, to: q).vector, Pose.identity.vector)), 1, accuracy: 0.00001)
     }
-    func testVerticalCoreMotionAxisBecomesSceneVertical() {
+    func testLeftTurnMovesFrontalAvatarNoseLeft() {
         let result = Pose.scene(simd_quatf(angle: .pi / 2, axis: SIMD3<Float>(0, 0, 1)))
         let forward = result.act(SIMD3<Float>(0, 0, 1))
-        XCTAssertEqual(forward.x, 1, accuracy: 0.00001)
+        XCTAssertEqual(forward.x, -1, accuracy: 0.00001)
         XCTAssertEqual(forward.y, 0, accuracy: 0.00001)
+    }
+    func testLookUpMovesFrontalAvatarNoseUp() {
+        let result = Pose.scene(simd_quatf(angle: .pi / 2, axis: SIMD3<Float>(1, 0, 0)))
+        let nose = result.act(SIMD3<Float>(0, 0, 1))
+        XCTAssertEqual(nose.y, 1, accuracy: 0.00001)
+    }
+    func testRightTiltMovesFrontalAvatarCrownRight() {
+        let result = Pose.scene(simd_quatf(angle: .pi / 2, axis: SIMD3<Float>(0, 1, 0)))
+        let crown = result.act(SIMD3<Float>(0, 1, 0))
+        XCTAssertEqual(crown.x, 1, accuracy: 0.00001)
     }
     func testWraparoundUsesShortestPath() {
         let a = simd_quatf(angle: 179 * .pi / 180, axis: SIMD3<Float>(0, 0, 1))

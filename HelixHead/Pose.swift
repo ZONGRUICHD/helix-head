@@ -3,8 +3,11 @@ import simd
 
 struct Pose {
     static let identity = simd_quatf(angle: 0, axis: SIMD3<Float>(0, 1, 0))
-    // Core Motion: X right, Y forward, Z up. Scene: X right, Y up, Z back.
-    static let basis = simd_quatf(angle: -.pi / 2, axis: SIMD3<Float>(1, 0, 0))
+    // Core Motion: X right, Y forward, Z up. Our avatar faces the viewer (+Z).
+    // Mirror positions across depth: M(x,y,z)=(x,z,y). Rotation axes are
+    // pseudovectors, so map them by det(M)*M: (x,y,z)->(-x,-z,-y).
+    // This makes looking up lift the avatar's nose and right tilt lean right.
+    static let basis = simd_quatf(angle: .pi, axis: simd_normalize(SIMD3<Float>(0, 1, -1)))
     static func relative(_ current: simd_quatf, to reference: simd_quatf) -> simd_quatf {
         simd_normalize(reference.inverse * current)
     }
