@@ -6,6 +6,7 @@ struct ContentView: View {
     @State private var tab = 0
     @State private var showHelp = false
     private var backdrop: Color { Color(uiColor: .systemGroupedBackground) }
+    private var appVersion: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—" }
     var body: some View {
         TabView(selection: $tab) {
             Tab("跟踪", systemImage: "viewfinder", value: 0) { tracking }
@@ -141,7 +142,7 @@ struct ContentView: View {
                     Text("需要支持头部运动的 AirPods。传感器更新率由系统与耳机决定；切入后台会自动暂停。").font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("关于") {
-                    LabeledContent("Helix Head", value: "1.0.0")
+                    LabeledContent("Helix Head", value: appVersion)
                     Text("为 AirPods 打造的实时头部动作镜像。\n\n所有运动数据仅在设备内处理。没有账户、广告或网络上传。")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
