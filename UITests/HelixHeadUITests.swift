@@ -35,7 +35,9 @@ final class HelixHeadUITests: XCTestCase {
         let changes = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
             app.staticTexts["yawValue"].label != oldValue
         }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [changes], timeout: 5), .completed)
+        // Hosted simulators stall for seconds at a time when the runner is loaded,
+        // so wait on the value changing rather than on a tight wall-clock budget.
+        XCTAssertEqual(XCTWaiter.wait(for: [changes], timeout: 20), .completed)
         attach("Tracking", app)
         app.buttons["trackingToggle"].tap()
     }

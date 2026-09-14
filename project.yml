@@ -20,6 +20,8 @@ targets:
       path: HelixHead/Info.plist
       properties:
         CFBundleDisplayName: Helix Head
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSMotionUsageDescription: 读取 AirPods 的头部运动，让屏幕中的头部实时跟随你。
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
