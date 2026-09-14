@@ -12,9 +12,9 @@ struct HeadScene: UIViewRepresentable {
         view.antialiasingMode = .multisampling4X
         view.preferredFramesPerSecond = 60
         let scene = SCNScene(); view.scene = scene
-        let camera = SCNNode(); camera.camera = SCNCamera(); camera.position = SCNVector3(0, 0.25, 6.2)
+        let camera = SCNNode(); camera.camera = SCNCamera(); camera.position = SCNVector3(0, 0, 6.2)
         camera.camera?.usesOrthographicProjection = true
-        camera.camera?.orthographicScale = 1.7
+        camera.camera?.orthographicScale = 1.9
         scene.rootNode.addChildNode(camera); view.pointOfView = camera
         let head = context.coordinator.head; scene.rootNode.addChildNode(head)
         let pearl = SCNMaterial(); pearl.diffuse.contents = UIColor(red: 0.78, green: 0.86, blue: 0.81, alpha: 1)
@@ -64,10 +64,16 @@ struct HeadScene: UIViewRepresentable {
             let i = min(Int(u), profile.count - 2), f = u - Float(i)
             let a = profile[max(0, i - 1)], b = profile[i]
             let c = profile[i + 1], d = profile[min(profile.count - 1, i + 2)]
-            let linear = (c - a) * f
-            let quadratic = (2 * a - 5 * b + 4 * c - d) * f * f
-            let cubic = (-a + 3 * b - 3 * c + d) * f * f * f
-            return (2 * b + linear + quadratic + cubic) * 0.5
+            let f2: Float = f * f, f3: Float = f * f * f
+            let w0: Float = -0.5 * f + f2 - 0.5 * f3
+            let w1: Float = 1 - 2.5 * f2 + 1.5 * f3
+            let w2: Float = 0.5 * f + 2 * f2 - 1.5 * f3
+            let w3: Float = -0.5 * f2 + 0.5 * f3
+            var result: SIMD3<Float> = a * w0
+            result += b * w1
+            result += c * w2
+            result += d * w3
+            return result
         }
         var vertices: [SCNVector3] = [], normals: [SCNVector3] = [], indices: [Int32] = []
         for ring in 0...rings {
