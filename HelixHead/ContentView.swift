@@ -102,7 +102,7 @@ struct ContentView: View {
                     Text(motion.mode == .demo ? "演示数据 · 非传感器读数" : motion.mode.rawValue).foregroundStyle(.secondary)
                     HStack(alignment: .firstTextBaseline) {
                         Text(String(format: "%.0f", motion.rate)).font(.system(size: 64, weight: .medium)).monospacedDigit()
-                        Text("Hz 实测更新率").foregroundStyle(.secondary)
+                        Text(motion.mode == .demo ? "Hz 演示更新率" : "Hz 实测更新率").foregroundStyle(.secondary)
                     }
                     axes
                     VStack(alignment: .leading, spacing: 20) {
@@ -131,7 +131,7 @@ struct ContentView: View {
             Form {
                 Section("跟踪体验") {
                     Toggle("平滑细微抖动", isOn: $motion.smoothing)
-                    Text("使用四元数插值，避免旋转跨越 ±180° 时跳变。关闭后直接显示每次采样。").font(.footnote).foregroundStyle(.secondary)
+                    Text("减少轻微晃动，让头部动作更稳定。关闭后响应更直接。").font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("连接与权限") {
                     Button("连接使用指南") { showHelp = true }
@@ -142,7 +142,7 @@ struct ContentView: View {
                 }
                 Section("关于") {
                     LabeledContent("Helix Head", value: "1.0.0")
-                    Text("所有运动数据仅在设备内处理。没有账户、广告或网络上传。\n\n界面参考 Plasma One 的留白、胶囊操作和深绿卡片，使用 iOS 26 原生 Liquid Glass 控件。本项目与 Plasma 无关联。")
+                    Text("为 AirPods 打造的实时头部动作镜像。\n\n所有运动数据仅在设备内处理。没有账户、广告或网络上传。")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
             }.navigationTitle("设置")

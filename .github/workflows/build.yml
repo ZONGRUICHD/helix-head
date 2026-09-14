@@ -4,6 +4,11 @@ on:
     branches: [main]
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Optional new release tag, e.g. v1.0.0 (created only after tests pass)'
+        required: false
+        type: string
 permissions:
   contents: write
 concurrency:
@@ -25,7 +30,7 @@ jobs:
           brew install xcodegen
           xcodegen generate
           mkdir -p build
-          zip -qr build/HelixHead-XcodeProject.zip HelixHead.xcodeproj HelixHead project.yml
+          zip -qr build/HelixHead-XcodeProject.zip HelixHead.xcodeproj HelixHead Tests UITests project.yml README.md
       - name: Build unsigned device app
         run: |
           set -o pipefail
@@ -47,6 +52,9 @@ jobs:
         run: |
           mkdir -p build/package/Payload
           cp -R build/device/Build/Products/Release-iphoneos/HelixHead.app build/package/Payload/
+          if codesign -dv build/package/Payload/HelixHead.app 2>/dev/null; then
+            echo 'Expected an unsigned device app'; exit 1
+          fi
           cd build/package
           /usr/bin/zip -qry ../HelixHead-unsigned.ipa Payload
           cd ..
@@ -67,7 +75,18 @@ jobs:
             toolchain.txt
           retention-days: 14
       - name: Publish release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" build/HelixHead-unsigned.ipa build/SHA256SUMS.txt toolchain.txt --verify-tag --title "Helix Head $GITHUB_REF_NAME" --notes-file RELEASE_NOTES.md
+          REQUESTED_TAG: ${{ inputs.release_tag }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            RELEASE_TAG="$GITHUB_REF_NAME"
+          else
+            RELEASE_TAG="$REQUESTED_TAG"
+            if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+              echo 'Manual release requires a new tag'; exit 1
+            fi
+          fi
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Use a vMAJOR.MINOR.PATCH tag'; exit 1; }
+          gh release create "$RELEASE_TAG" build/HelixHead-unsigned.ipa build/SHA256SUMS.txt build/HelixHead-XcodeProject.zip toolchain.txt --target "$GITHUB_SHA" --title "Helix Head $RELEASE_TAG" --notes-file RELEASE_NOTES.md

@@ -25,6 +25,8 @@ xcodebuild -project HelixHead.xcodeproj -scheme HelixHead -sdk iphoneos -configu
 
 GitHub Actions 对 main 分支编译和运行测试；推送 `v*` 标签还会打包 `Payload/HelixHead.app` 为未签名 IPA，生成 SHA-256 并发布 Release。测试失败不会发布。下载的 IPA 需要自行签名才能安装。
 
+也可在 Actions → Run workflow 中填写新的 `release_tag`（例如 `v1.0.0`），通过测试后才创建标签并发布。Release 附带可直接打开的 Xcode 工程压缩包，包含源代码与测试。
+
 ## Xcode 版本说明
 
 原会话指定 Xcode 26.6.2。接手时 [GitHub macOS 26 运行器清单](https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md) 列出 macOS 26.6.2 和 Xcode 26.6，未提供 Xcode 26.6.2。因此工作流明确选择 Xcode 26.6，不隐式回退；真实工具链版本随 Release 附件提供。

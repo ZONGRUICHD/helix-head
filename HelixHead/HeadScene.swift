@@ -13,6 +13,8 @@ struct HeadScene: UIViewRepresentable {
         view.preferredFramesPerSecond = 60
         let scene = SCNScene(); view.scene = scene
         let camera = SCNNode(); camera.camera = SCNCamera(); camera.position = SCNVector3(0, 0.25, 6.2)
+        camera.camera?.usesOrthographicProjection = true
+        camera.camera?.orthographicScale = 1.7
         scene.rootNode.addChildNode(camera); view.pointOfView = camera
         let head = context.coordinator.head; scene.rootNode.addChildNode(head)
         let pearl = SCNMaterial(); pearl.diffuse.contents = UIColor(red: 0.78, green: 0.86, blue: 0.81, alpha: 1)
@@ -21,8 +23,7 @@ struct HeadScene: UIViewRepresentable {
             geometry.materials = [pearl]; let node = SCNNode(geometry: geometry)
             node.position = position; node.scale = scale; head.addChildNode(node)
         }
-        part(SCNSphere(radius: 1), SCNVector3(0, 0.22, 0), SCNVector3(0.73, 1.04, 0.76))
-        part(SCNSphere(radius: 1), SCNVector3(0, -0.38, 0.22), SCNVector3(0.56, 0.55, 0.58))
+        part(Self.sculptedHead(), SCNVector3Zero, SCNVector3(1, 1, 1))
         part(SCNCapsule(capRadius: 0.29, height: 0.8), SCNVector3(0, -1.05, 0), SCNVector3(1, 1, 1))
         part(SCNSphere(radius: 1), SCNVector3(0, 0.07, 0.76), SCNVector3(0.13, 0.25, 0.2))
         for x: Float in [-0.74, 0.74] {
@@ -45,5 +46,49 @@ struct HeadScene: UIViewRepresentable {
         SCNTransaction.begin(); SCNTransaction.animationDuration = 0
         context.coordinator.head.simdOrientation = orientation
         SCNTransaction.commit()
+    }
+
+    // A single smooth mesh avoids intersecting skull/jaw seams.
+    private static func sculptedHead() -> SCNGeometry {
+        // radius X, radius Z, forward offset; bottom to crown.
+        let profile: [SIMD3<Float>] = [
+            SIMD3(0.02, 0.02, 0.20), SIMD3(0.35, 0.35, 0.20),
+            SIMD3(0.51, 0.48, 0.15), SIMD3(0.64, 0.60, 0.07),
+            SIMD3(0.71, 0.69, 0.02), SIMD3(0.73, 0.73, 0),
+            SIMD3(0.70, 0.72, -0.02), SIMD3(0.61, 0.65, -0.04),
+            SIMD3(0.43, 0.48, -0.06), SIMD3(0.02, 0.02, -0.06)
+        ]
+        let rings = 72, segments = 64
+        func sample(_ t: Float) -> SIMD3<Float> {
+            let u = max(0, min(1, t)) * Float(profile.count - 1)
+            let i = min(Int(u), profile.count - 2), f = u - Float(i)
+            let a = profile[max(0, i - 1)], b = profile[i]
+            let c = profile[i + 1], d = profile[min(profile.count - 1, i + 2)]
+            let linear = (c - a) * f
+            let quadratic = (2 * a - 5 * b + 4 * c - d) * f * f
+            let cubic = (-a + 3 * b - 3 * c + d) * f * f * f
+            return (2 * b + linear + quadratic + cubic) * 0.5
+        }
+        var vertices: [SCNVector3] = [], normals: [SCNVector3] = [], indices: [Int32] = []
+        for ring in 0...rings {
+            let t = Float(ring) / Float(rings), p = sample(t)
+            let low = max(0, t - 0.001), high = min(1, t + 0.001)
+            let delta = (sample(high) - sample(low)) / (high - low)
+            for segment in 0...segments {
+                let theta = Float(segment) / Float(segments) * 2 * .pi
+                let c = cos(theta), s = sin(theta)
+                vertices.append(SCNVector3(p.x * c, -0.91 + t * 2.17, p.z + p.y * s))
+                let vertical = SIMD3<Float>(delta.x * c, 2.17, delta.z + delta.y * s)
+                let tangent = SIMD3<Float>(-p.x * s, 0, p.y * c)
+                let normal = simd_normalize(simd_cross(vertical, tangent))
+                normals.append(SCNVector3(normal.x, normal.y, normal.z))
+                if ring < rings && segment < segments {
+                    let a = Int32(ring * (segments + 1) + segment), b = a + Int32(segments + 1)
+                    indices += [a, b, a + 1, a + 1, b, b + 1]
+                }
+            }
+        }
+        return SCNGeometry(sources: [SCNGeometrySource(vertices: vertices), SCNGeometrySource(normals: normals)],
+                           elements: [SCNGeometryElement(indices: indices, primitiveType: .triangles)])
     }
 }

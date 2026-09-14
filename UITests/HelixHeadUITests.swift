@@ -11,7 +11,6 @@ final class HelixHeadUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["DEMO"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["recenter"].isEnabled)
         app.buttons["recenter"].tap()
-        attach("Tracking", app)
         app.tabBars.buttons["数据"].tap()
         XCTAssertTrue(app.staticTexts["演示数据 · 非传感器读数"].exists)
         attach("Telemetry", app)
@@ -28,6 +27,17 @@ final class HelixHeadUITests: XCTestCase {
         app.buttons["完成"].tap()
         app.tabBars.buttons["数据"].tap()
         XCTAssertTrue(app.staticTexts["等待运动数据"].exists)
+        app.tabBars.buttons["跟踪"].tap()
+        app.swipeUp()
+        app.buttons["startDemo"].tap()
+        app.swipeDown()
+        let oldValue = app.staticTexts["yawValue"].label
+        let changes = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            app.staticTexts["yawValue"].label != oldValue
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [changes], timeout: 5), .completed)
+        attach("Tracking", app)
+        app.buttons["trackingToggle"].tap()
     }
     private func attach(_ name: String, _ app: XCUIApplication) {
         let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = name; shot.lifetime = .keepAlways
