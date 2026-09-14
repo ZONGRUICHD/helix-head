@@ -1,0 +1,20 @@
+import Foundation
+import simd
+
+struct Pose {
+    static let identity = simd_quatf(angle: 0, axis: SIMD3<Float>(0, 1, 0))
+    // Core Motion: X right, Y forward, Z up. Scene: X right, Y up, Z back.
+    static let basis = simd_quatf(angle: -.pi / 2, axis: SIMD3<Float>(1, 0, 0))
+    static func relative(_ current: simd_quatf, to reference: simd_quatf) -> simd_quatf {
+        simd_normalize(reference.inverse * current)
+    }
+    static func scene(_ relative: simd_quatf) -> simd_quatf {
+        simd_normalize(basis * relative * basis.inverse)
+    }
+    static func degrees(_ q: simd_quatf) -> SIMD3<Double> {
+        let x = Double(q.imag.x), y = Double(q.imag.y), z = Double(q.imag.z), w = Double(q.real)
+        return SIMD3(atan2(2 * (w*z + x*y), 1 - 2 * (y*y + z*z)),
+                     atan2(2 * (w*x + y*z), 1 - 2 * (x*x + y*y)),
+                     asin(max(-1, min(1, 2 * (w*y - z*x))))) * (180 / .pi)
+    }
+}
