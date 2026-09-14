@@ -3,7 +3,6 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject private var motion: MotionStore
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var tab = 0
     @State private var showHelp = false
     private var backdrop: Color { Color(uiColor: .systemGroupedBackground) }

@@ -10,6 +10,7 @@ settings:
     MARKETING_VERSION: 1.0.0
     CURRENT_PROJECT_VERSION: 1
     CODE_SIGNING_ALLOWED: NO
+    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 targets:
   HelixHead:
     type: application
@@ -27,12 +28,18 @@ targets:
     type: bundle.unit-test
     platform: iOS
     sources: [Tests]
+    settings:
+      GENERATE_INFOPLIST_FILE: YES
+      ASSETCATALOG_COMPILER_APPICON_NAME: ''
     dependencies:
       - target: HelixHead
   HelixHeadUITests:
     type: bundle.ui-testing
     platform: iOS
     sources: [UITests]
+    settings:
+      GENERATE_INFOPLIST_FILE: YES
+      ASSETCATALOG_COMPILER_APPICON_NAME: ''
     dependencies:
       - target: HelixHead
 schemes:

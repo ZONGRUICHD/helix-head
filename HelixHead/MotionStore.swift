@@ -38,7 +38,25 @@ import simd
         mode = .waiting
         detail = "等待耳机运动数据。请佩戴支持头部跟踪的 AirPods，并连接这台设备。"
         let token = generation
-        // Start even when unavailable: Core Motion can begin delivering after connection.
+        manager.startConnectionStatusUpdates()
+        startStream(token: token)
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, self.wantsLive else { return }
+                if self.mode == .live && Date().timeIntervalSince(self.lastArrival) > 2 {
+                    self.mode = .waiting; self.rate = 0; self.hasSample = false
+                    self.reference = nil; self.lastTimestamp = nil
+                    self.detail = "数据已停止。检查耳机佩戴和蓝牙连接，恢复后将自动重新归零。"
+                }
+                if self.mode == .waiting && self.manager.isDeviceMotionAvailable && !self.manager.isDeviceMotionActive {
+                    self.startStream(token: self.generation)
+                }
+            }
+        }
+    }
+
+    private func startStream(token: Int) {
+        guard manager.isDeviceMotionAvailable else { return }
         manager.startDeviceMotionUpdates(to: .main) { [weak self] motion, error in
             guard let self, self.generation == token, self.wantsLive else { return }
             if let error {
@@ -53,25 +71,16 @@ import simd
             self.mode = .live
             self.detail = "动作正在实时映射。面向屏幕，轻点归零设置正前方。"
         }
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                guard let self, self.wantsLive else { return }
-                if self.mode == .live && Date().timeIntervalSince(self.lastArrival) > 2 {
-                    self.mode = .waiting; self.rate = 0; self.hasSample = false
-                    self.reference = nil; self.lastTimestamp = nil
-                    self.detail = "数据已停止。检查耳机佩戴和蓝牙连接，恢复后将自动重新归零。"
-                }
-            }
-        }
     }
 
     func demo() {
         stopResources(); mode = .demo
         detail = "这是模拟动作，不是 AirPods 传感器数据。"
         let start = Date()
+        let token = generation
         timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                guard let self, self.mode == .demo else { return }
+                guard let self, self.mode == .demo, self.generation == token else { return }
                 let t = Date().timeIntervalSince(start)
                 let yaw = simd_quatf(angle: Float(sin(t * 0.7)) * 0.65, axis: SIMD3(0, 0, 1))
                 let pitch = simd_quatf(angle: Float(sin(t * 1.1)) * 0.25, axis: SIMD3(1, 0, 0))
@@ -102,6 +111,7 @@ import simd
     private func stopResources() {
         generation += 1; wantsLive = false; timer?.invalidate(); timer = nil
         manager.stopDeviceMotionUpdates(); reference = nil; lastTimestamp = nil
+        manager.stopConnectionStatusUpdates()
         rate = 0; hasSample = false; history = []; filtered = Pose.identity
     }
     nonisolated func headphoneMotionManagerDidDisconnect(_ manager: CMHeadphoneMotionManager) {
@@ -111,5 +121,10 @@ import simd
             self.detail = "AirPods 已断开。重新连接后将自动恢复。"
         }
     }
-    nonisolated func headphoneMotionManagerDidConnect(_ manager: CMHeadphoneMotionManager) {}
+    nonisolated func headphoneMotionManagerDidConnect(_ manager: CMHeadphoneMotionManager) {
+        Task { @MainActor [weak self] in
+            guard let self, self.wantsLive, !self.manager.isDeviceMotionActive else { return }
+            self.startStream(token: self.generation)
+        }
+    }
 }
